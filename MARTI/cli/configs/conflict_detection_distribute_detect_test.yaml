@@ -1,0 +1,148 @@
+# Conflict Detection Training Configuration
+# Based on the paper method with two-agent GRPO
+
+defaults:
+  - default
+  - _self_
+
+# Workflow configuration
+workflow_version: "custom"
+agent_workflow: "conflict-detection"
+async_workflow: true
+parallel_loading: true
+workflow_func_path: "/seu_nvme/home/220242328/MARTI/marti/worlds/workflows/conflict_workflow_distribute_detect.py"
+# processor_func_path: "marti/worlds/workflows/conflict_processor.py"
+processor_func_path: "/seu_nvme/home/220242328/MARTI/marti/worlds/workflows/default_processor.py"
+
+
+# Workflow arguments (passed to workflow function)
+workflow_args:
+  invalid_penalty_lambda_c: 0.35
+  invalid_penalty_lambda_d: 0.35
+  final_reward_lambda: 0.5
+  classification_instruction: |
+    You are a classification agent. Your task is to group the following textual units based on content similarity. That is to say, put the text with similar content in the same group and the text with significant differences in different groups. Note that a single text unit is allowed to be assigned to multiple groups if it shares core content with multiple groups(However, simply assigning all the texts to all the groups is not allowed.). You need to directly perform the grouping task without repeatedly reflecting on factual information during the process.
+
+    Textual Units:
+    {texts_str}
+
+    Your output must be a valid JSON object with the following structure:
+    {{
+        "groups": {{
+            "0": [unit_ID_1, unit_ID_2, ...],  // Replace with actual IDs of textual units in group 0
+            "1": [unit_ID_3, unit_ID_4, ...],  // Replace with actual IDs of textual units in group 1
+            ...  // Add more groups as needed
+        }}
+    }}
+    Note: "unit_ID" refers to the unique identifier of each textual unit, it is a number. (e.g., if the textual units are provided as a list, the ID is the index of the unit in the list (the number immediately following 'TEXT')).
+
+    Important: Use consecutive group IDs starting from 0. And output valid JSON. DO NOT GENERATE GROUPS WHERE THE GROUP IDS ARE DIFFERENT BUT THE GROUP CONTENTS ARE EXACTLY THE SAME! If there are duplicate groupings in the output, then this is an invalid classification.
+
+    The JSON object: json
+
+  detection_instruction: |
+    You are a conflict detection agent. Your task: For EACH textual units group, determine if there are any conflicting text pairs within that group. A conflicting text pair refers to a pair of texts that appear similar but in which some entities have been replaced, or in which there exist inconsistent facts.
+
+    Groups of Textual Units:
+    {classification_result}
+
+    Your output must be a valid JSON object with the following structure:
+    {{
+        "conflicts": [
+            [unit_ID_1, unit_ID_2],  // Replace with actual IDs of textual units in first conflict pair
+            [unit_ID_3, unit_ID_4],  // Replace with actual IDs of textual units in second conflict pair
+            ...  // Add more conflict pairs as needed
+        ]
+    }}
+    Note: "unit_ID" refers to the unique identifier of each textual unit, it is a number. (e.g., if the textual units are provided as a list, the ID is the index of the unit in the list (the number immediately following 'TEXT')).
+
+    Important: Only include conflict pairs where BOTH units are in the SAME group. If no conflicts, output empty list: {{"conflicts": []}}. Please reduce the steps of hesitation and self-correction (such as "Wait", "But wait" etc.), while maintaining the core reasoning steps. A brief reasoning process is preferred. 
+
+    The JSON object: json
+    
+  
+# Define two agents: classifier and detector
+agents:
+  - classifier:
+      role: classification_agent
+      is_tuning: true
+  - detector:
+      role: detection_agent
+      is_tuning: true
+
+# Training data
+prompt_data: "json@/seu_nvme/home/220242328/MARTI/data/confiqa"  # Start with simple ConFiQA
+input_key: "texts"       # Key containing the sample JSON
+label_key: "labels"     # Key containing the labels JSON
+
+# Data format example:
+# {
+#   "data": '{"textual_units": [...]}',
+#   "labels": '{"conflicts": [[1, 2], ...]}'
+# }
+
+normalize_advantages: true   # Normalize advantages for stability
+ 
+
+# Model configuration
+default_agent:
+  pretrain: "Qwen/Qwen3-1.7B"  # Or your model path
+  zero_stage: 3
+  bf16: true
+  temperature: 1
+  lambd: 1.0
+  gamma: 1.0
+  rollout_batch_size: 128
+  micro_rollout_batch_size: 8
+  train_batch_size: 128
+  micro_train_batch_size: 8
+  is_reasoning_model: false
+  vllm_sync_backend: "nccl"
+  actor_learning_rate: 1e-6
+  critic_learning_rate: 9e-5
+  deepspeed_enable_sleep: true
+  vllm_enable_sleep: true
+  save_steps: 20
+  eval_steps: 5
+  max_ckpt_num: 10
+  normalize_reward: true
+  adam_offload: true
+  gradient_checkpointing: true
+  max_samples: 400000       # Max samples per episode (-1 for all)
+  max_epochs: 1              # Max epochs per episode (-1 for all)
+  num_episodes: 4
+  advantage_estimator: "reinforce"
+  use_kl_loss: true
+  init_kl_coef: 0.00
+  save_path: "./outputs/conflict_detection/model"
+  ckpt_path: "./outputs/conflict_detection/ckpt"
+  n_samples_per_prompt: 8   # Each prompt generates K samples internally
+  max_len: 20480
+  prompt_max_len: 10240    # Enough for textual units + instructions
+  generate_max_len: 6144  # Enough for JSON output
+  ref_num_nodes: 1
+  ref_num_gpus_per_node: 2
+  actor_num_nodes: 1
+  actor_num_gpus_per_node: 2
+  critic_num_nodes: 1
+  critic_num_gpus_per_node: 2
+  vllm_num_engines: 2
+  vllm_tensor_parallel_size: 1
+  colocate_all_models: true
+  vllm_gpu_memory_utilization: 0.9
+
+
+# Checkpointing
+
+eval_before_training: false
+eval_only: false
+eval_workers: -1
+shared_agents: false
+add_prompt_suffix: null
+mask_truncated_completions: true
+
+reward_alloc:
+  name: "margin"
+  alpha: 0.5
+  beta: 0.5
+  use_ttrl: false

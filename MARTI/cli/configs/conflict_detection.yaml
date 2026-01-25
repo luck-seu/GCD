@@ -1,0 +1,191 @@
+# Conflict Detection Training Configuration
+# Based on the paper method with two-agent GRPO
+
+defaults:
+  - default
+  - _self_
+
+# Workflow configuration
+workflow_version: "custom"
+agent_workflow: "conflict-detection"
+async_workflow: true
+parallel_loading: true
+workflow_func_path: "/seu_nvme/home/220242328/MARTI/marti/worlds/workflows/conflict_workflow.py"
+# processor_func_path: "marti/worlds/workflows/conflict_processor.py"
+processor_func_path: "/seu_nvme/home/220242328/MARTI/marti/worlds/workflows/default_processor.py"
+
+
+# Workflow arguments (passed to workflow function)
+workflow_args:
+  invalid_penalty_lambda_c: 1
+  invalid_penalty_lambda_d: 0.35
+  final_reward_lambda: 0.5
+  classification_instruction: |
+    You are a classification agent. Your task is to group textual units into small groups such that each group contains textual units that describe the SAME factual claim and could potentially form a conflicting pair.
+
+    Important assumptions:
+    - Each textual unit can participate in AT MOST ONE factual conflict.
+    - Therefore, groups should be SMALL and focused.
+    - In most cases, a group should contain exactly TWO textual units.
+
+    Two textual units SHOULD be placed in the same group ONLY IF:
+    - They refer to the same subject (person, organization, or event), AND
+    - They describe the same factual predicate or attribute of that subject, AND
+    - Their claims are directly comparable and could contradict each other.
+
+    Do NOT group texts if:
+    - They describe different attributes or events, even if the subject is the same.
+    - They are only topically related but not factually comparable.
+    - There is no clear factual claim.
+
+    Structural constraints:
+    - Each textual unit MUST appear in AT MOST ONE group.
+    - Groups with only one unit are allowed if no comparable unit exists.
+    - Do NOT create overlapping or redundant groups.
+    - Use consecutive group IDs starting from 0.
+
+    Textual Units:
+    {texts_str}
+
+    Output format:
+    Your output must be a valid JSON object:
+
+    {{
+    "groups": {{
+        "0": [unit_ID_1, unit_ID_2, ...],  // Text unit IDs in group 0
+        "1": [unit_ID_3, unit_ID_4, ...],  // Text unit IDs in group 1
+        ...  // and so on
+    }}
+    }}
+
+    Notes:
+    - Prefer precision over recall: it is better to leave a unit alone than to group unrelated units.
+    - Do NOT reason about factual correctness, only factual comparability.
+
+    The JSON object: json
+
+  detection_instruction: |
+    You are a conflict detection agent. Your task is to determine whether a factual conflict exists within each group of textual units.
+
+    For each group:
+    - If the group contains fewer than two units, skip it.
+    - If the group contains more than two units, determine whether they form a factual conflict.
+
+    A conflict exists ONLY IF:
+    - The two texts refer to the same subject, AND
+    - They assert the same factual predicate, AND
+    - Their claims are mutually incompatible
+    (e.g., different entities, numbers, dates, locations, or explicit negation).
+
+    Do NOT mark a conflict if:
+    - The difference is only stylistic or in level of detail.
+    - The statements can both be true.
+    - One statement is a paraphrase or refinement of the other.
+
+    Groups of Textual Units:
+    {classification_result}
+
+    Output format:
+    Your output must be a valid JSON object:
+    {{
+    "conflicts": [
+        [unit_ID_1, unit_ID_2],
+        [unit_ID_3, unit_ID_4],
+        ...  // and so on
+    ]
+    }}
+
+    Constraints:
+    - Each conflict pair must come from the SAME group.
+    - Do NOT output duplicate or reversed pairs.
+    - If no conflicts are found, output: {{"conflicts": []}}
+    - Keep reasoning implicit and concise.
+
+    The JSON object: json
+    
+  
+# Define two agents: classifier and detector
+agents:
+  - classifier:
+      role: classification_agent
+      is_tuning: true
+  - detector:
+      role: detection_agent
+      is_tuning: true
+
+# Training data
+prompt_data: "json@/seu_nvme/home/220242328/MARTI/data/confiqa"  # Start with simple ConFiQA
+input_key: "texts"       # Key containing the sample JSON
+label_key: "labels"     # Key containing the labels JSON
+
+# Data format example:
+# {
+#   "data": '{"textual_units": [...]}',
+#   "labels": '{"conflicts": [[1, 2], ...]}'
+# }
+
+normalize_advantages: true   # Normalize advantages for stability
+ 
+
+# Model configuration
+default_agent:
+  pretrain: "Qwen/Qwen3-1.7B"  # Or your model path
+  zero_stage: 3
+  bf16: true
+  temperature: 1
+  lambd: 1.0
+  gamma: 1.0
+  rollout_batch_size: 128
+  micro_rollout_batch_size: 8
+  train_batch_size: 128
+  micro_train_batch_size: 8
+  is_reasoning_model: false
+  vllm_sync_backend: "nccl"
+  actor_learning_rate: 1e-6
+  critic_learning_rate: 9e-5
+  deepspeed_enable_sleep: true
+  vllm_enable_sleep: true
+  save_steps: 20
+  eval_steps: 5
+  max_ckpt_num: 10
+  normalize_reward: true
+  adam_offload: true
+  gradient_checkpointing: true
+  max_samples: 400000       # Max samples per episode (-1 for all)
+  max_epochs: 1              # Max epochs per episode (-1 for all)
+  num_episodes: 4
+  advantage_estimator: "reinforce"
+  use_kl_loss: true
+  init_kl_coef: 0.00
+  save_path: "./outputs/conflict_detection/model"
+  ckpt_path: "./outputs/conflict_detection/ckpt"
+  n_samples_per_prompt: 8   # Each prompt generates K samples internally
+  max_len: 20480
+  prompt_max_len: 10240    # Enough for textual units + instructions
+  generate_max_len: 6144  # Enough for JSON output
+  ref_num_nodes: 1
+  ref_num_gpus_per_node: 2
+  actor_num_nodes: 1
+  actor_num_gpus_per_node: 2
+  critic_num_nodes: 1
+  critic_num_gpus_per_node: 2
+  vllm_num_engines: 2
+  vllm_tensor_parallel_size: 1
+  colocate_all_models: true
+  vllm_gpu_memory_utilization: 0.9
+
+
+# Checkpointing
+
+eval_before_training: false
+eval_only: false
+eval_workers: -1
+shared_agents: false
+add_prompt_suffix: null
+mask_truncated_completions: true
+
+reward_alloc:
+  name: "margin"
+  alpha: 0.5
+  beta: 0.5
+  use_ttrl: false
