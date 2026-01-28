@@ -5,7 +5,7 @@ set -x
 
 export WANDB_MODE="offline"
 export WANDB_DIR="/seu_share/home/220242328/wandb_offline_logs"
-WANDB_KEY="65677e742de2e88a9dee16ced38facdad647c3fd"
+WANDB_KEY=""
 module load cuda-12.4
 module load gcc-9.3.0
 # Start Ray cluster
