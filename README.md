@@ -23,11 +23,10 @@ MARTI/
 │   └── workflows/
 │       ├── conflict_workflow.py                      # Standard two-stage workflow
 │       ├── conflict_workflow_1step.py                # Single-stage workflow
-│       └── conflict_workflow_distribute_detect.py    # Distributed parallel workflow
 └── cli/
     └── configs/
-        ├── conflict_detection_trainfree_2step_test.yaml
-        └── conflict_detection_trainfree_1step_test.yaml
+        ├── conflict_detection.yaml
+        └── conflict_detection_1step.yaml
 ```
 
 ---
