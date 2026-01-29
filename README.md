@@ -28,6 +28,14 @@ MARTI/
         ├── conflict_detection.yaml
         └── conflict_detection_1step.yaml
 ```
+---
+
+## Env Settings
+```
+conda create -n GCD python=3.12 -y
+conda activate GCD
+pip install -r requirements.txt
+```
 
 ---
 
