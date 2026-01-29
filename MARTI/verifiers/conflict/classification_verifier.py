@@ -1,12 +1,6 @@
 """
-Classification Verifier for Conflict Detection
+Implements reward functions for the grouping agent (Task 1).
 
-Implements reward functions for the classification agent (Task 1).
-
-Paper Method:
-  - MatchScore: Measures grouping quality based on pairwise agreement
-  - Structural penalty: Penalizes invalid outputs
-  - r_c = MatchScore - λ_c * Invalid
 """
 
 import json
@@ -67,31 +61,6 @@ def parse_json_with_fallback(text: str):
 
 
 def parse_classification_output(output: str) -> Dict[int, Any]:
-    """
-    Parse classification agent output.
-
-    Expected format:
-    {
-        "groups": {
-            "0": [0, 1, ...],  // Text unit IDs in group 0
-            "1": [2, 3, ...],  // Text unit IDs in group 1
-            ...  // and so on
-        }
-    }
-
-    Args:
-        output: Raw agent output string
-
-    Returns:
-        Parsed classification dict
-    """
-    # Try to extract JSON
-    # output = strip_think_block(output)
-    # output = strip_markdown_fence(output)
-    # json_match = re.search(r'\{[\s\S]*\}', output)
-    # if not json_match:
-    #     raise ValueError("No JSON found in classification output")
-    # parsed = parse_json_with_fallback(json_match.group())
     try:
         json_str = extract_last_json(output)
         parsed = parse_json_with_fallback(json_str)
@@ -147,21 +116,7 @@ def compute_classification_reward(
     n_units: int,
     lambda_c: float = 0.5,
     alpha: float = 3.0,
-    beta: float = 0.8,
-    eps: float = 0.1
 ) -> float:
-    """
-    Compute classification reward based on cohesion and separation.
-
-    Args:
-        predicted_groups: Predicted grouping {"0": [0, 1, ...], "1": [2, 3, ...], ...}
-        ground_truth_conflicts: Conflict labels [[0, 1], [2, 3], ...]
-        n_units: Number of units
-        lambda_c: Penalty weight for invalid outputs
-
-    Returns:
-        Reward between [0, 1]
-    """
     # Check for structural errors
     invalid_penalty = 0.0
     if len(predicted_groups) == 0:
@@ -183,15 +138,9 @@ def compute_classification_reward(
             else:
                 pred_unit_ids.add(unit_id)
 
-    # for uid in range(n_units):
-    #     if uid not in pred_unit_ids:
-    #         missing_num += 1.0
-
     if total_num == 0:
         return 0.0
     
-    # Penalize both missing units and invalid (out-of-range) units
-    # invalid_penalty += 0.5 * (missing_num / n_units) + 0.5 * (invalid_num / total_num)
     invalid_penalty += invalid_num / total_num
     validity = 1.0 - (invalid_penalty * lambda_c)
 
@@ -210,7 +159,6 @@ def compute_classification_reward(
     else:
         purity = 1.0
 
-    # Support multi-group assignment: track which groups each conflict pair appears in
     conflict_group_matches = []  # Each element is a set of group IDs where this conflict pair appears
 
     if len(ground_truth_conflicts) > 0:
@@ -230,57 +178,32 @@ def compute_classification_reward(
 
         # Separation: penalize if different conflict pairs have identical group distributions
         # This encourages different conflicts to be separated into different groups
-        # if matched_conflicts <= 1:
-        #     separation = 1.0
-        # else:
-        #     # Compare group sets between conflict pairs that were actually matched
-        #     matched_group_sets = [groups for groups in conflict_group_matches if len(groups) > 0]
+        if matched_conflicts <= 1:
+            separation = 1.0
+        else:
+            # Compare group sets between conflict pairs that were actually matched
+            matched_group_sets = [groups for groups in conflict_group_matches if len(groups) > 0]
 
-        #     same = 0
-        #     total = 0
-        #     for i, groups_a in enumerate(matched_group_sets):
-        #         for j, groups_b in enumerate(matched_group_sets):
-        #             if i >= j:
-        #                 continue
-        #             total += 1
-        #             # Two conflict pairs are "in the same group" if they have identical group sets
-        #             if groups_a == groups_b:
-        #                 same += 1
+            same = 0
+            total = 0
+            for i, groups_a in enumerate(matched_group_sets):
+                for j, groups_b in enumerate(matched_group_sets):
+                    if i >= j:
+                        continue
+                    total += 1
+                    # Two conflict pairs are "in the same group" if they have identical group sets
+                    if groups_a == groups_b:
+                        same += 1
 
-        #     separation = 1 - same / total if total > 0 else 1.0
+            separation = 1 - same / total if total > 0 else 1.0
 
-        # match_score = cohesion * separation
-        # match_score = cohesion * (eps + (1 - eps) * separation)
-        match_score = cohesion * purity
-
-
-        # if pred_group_num > len(ground_truth_conflicts):
-        #     groupnum_penalty = math.exp(-beta * (pred_group_num - len(ground_truth_conflicts)))
-        #     match_score = match_score * groupnum_penalty
-        # if pred_group_num == 1:
-        #     match_score = 0
+        match_score = cohesion * separation * purity
 
     else:
-        # if pred_group_num == 1:
-        #     match_score = 1.0
-        # else:
-        #     match_score = 0.0
         match_score = 1.0
         
 
     # Apply penalty
-    # final_reward = max(0.0, match_score - lambda_c * invalid_penalty)
     final_reward = match_score * validity
 
     return final_reward
-
-
-# predicted_groups = json.loads("""{"groups": {"0": [0, 1, 7, 3, 4, 8],
-#          "1": [2, 5, 6],
-#          "2": [9]
-#      }
-# }""")['groups']
-
-# ground_truth_conflicts = [[1, 7], [3, 4]]
-
-# compute_classification_reward(predicted_groups, ground_truth_conflicts, n_units=10)
