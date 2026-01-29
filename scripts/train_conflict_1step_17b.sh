@@ -4,7 +4,7 @@
 set -x
 
 export WANDB_MODE="offline"
-export WANDB_DIR="/seu_share/home/220242328/wandb_offline_logs"
+export WANDB_DIR="wandb_offline_logs"
 WANDB_KEY=""
 module load cuda-12.4
 module load gcc-9.3.0
@@ -12,9 +12,9 @@ module load gcc-9.3.0
 ray start --head --port=6379 --dashboard-host=0.0.0.0 --dashboard-port=8265
 
 # Configuration
-MODEL_DIR="/seu_share/home/220242328/hf_cache/models/Qwen"
+MODEL_DIR="models/Qwen"
 ROOT_DIR=$(pwd)
-SHARE_ROOT_DIR="/seu_share/home/220242328/marti_outputs"
+SHARE_ROOT_DIR=""
 
 DATE=$(date +%m%d_%H%M)
 ADVANTAGE="reinforce"
@@ -43,7 +43,7 @@ export HYDRA_FULL_ERROR=1
 export CUDA_LAUNCH_BLOCKING=1
 export NCCL_DEBUG=WARN
 export RAY_PICKLE_VERBOSE_DEBUG=1
-export CUDA_HOME="/seu_share/apps/cuda-12.4"
+export CUDA_HOME="replace with your CUDA_HOME"
 export LD_LIBRARY_PATH=${CUDA_HOME}/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 

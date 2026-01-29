@@ -4,7 +4,7 @@
 set -x
 
 export WANDB_MODE="offline"
-export WANDB_DIR="/seu_share/home/220242328/wandb_offline_logs"
+export WANDB_DIR="wandb_offline_logs"
 WANDB_KEY=""
 module load cuda-12.4
 module load gcc-9.3.0
@@ -12,9 +12,9 @@ module load gcc-9.3.0
 ray start --head --port=6379 --dashboard-host=0.0.0.0 --dashboard-port=8265
 
 # Configuration
-MODEL_DIR="/seu_share/home/220242328/hf_cache/models/Qwen"
+MODEL_DIR="models/Qwen"
 ROOT_DIR=$(pwd)
-SHARE_ROOT_DIR="/seu_share/home/220242328/marti_outputs"
+SHARE_ROOT_DIR=""
 
 DATE=$(date +%m%d_%H%M)
 ADVANTAGE="reinforce"
@@ -22,8 +22,8 @@ SHORT_NAME="Qwen3-14B"
 TASK="confiqa"
 ALGO="trainfree-1step"
 PRETRAIN="${MODEL_DIR}/${SHORT_NAME}"
-# CLASSIFIER_PRETRAIN="/seu_share/home/220242328/marti_outputs/reinforce-coa-unshared/1227/Qwen3-1.7B/ckpt/_actor_classifier/actor_classifier"
-# DETECTOR_PRETRAIN="/seu_share/home/220242328/marti_outputs/reinforce-coa-unshared/1227/Qwen3-1.7B/ckpt/_actor_detector/actor_detector"
+# CLASSIFIER_PRETRAIN="reinforce-coa-unshared/1227/Qwen3-1.7B/ckpt/_actor_classifier/actor_classifier"
+# DETECTOR_PRETRAIN="reinforce-coa-unshared/1227/Qwen3-1.7B/ckpt/_actor_detector/actor_detector"
 EXP="${DATE}-${TASK}-${SHORT_NAME}-${ADVANTAGE}-${ALGO}-TEST"
 
 SAVE_PATH="${SHARE_ROOT_DIR}/outputs/${ADVANTAGE}-${ALGO}-${DATE}-TEST/${SHORT_NAME}"
@@ -45,7 +45,7 @@ export HYDRA_FULL_ERROR=1
 export CUDA_LAUNCH_BLOCKING=1
 export NCCL_DEBUG=WARN
 export RAY_PICKLE_VERBOSE_DEBUG=1
-export CUDA_HOME="/seu_share/apps/cuda-12.4"
+export CUDA_HOME="replace with your CUDA_HOME"
 export LD_LIBRARY_PATH=${CUDA_HOME}/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
 export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
@@ -78,7 +78,7 @@ ray job submit --address="http://localhost:8265" \
     default_agent.save_path="${SAVE_PATH}" \
     default_agent.ckpt_path="${CKPT_PATH}" \
     default_agent.advantage_estimator="${ADVANTAGE}" \
-    extra_eval_tasks=["macnoise0","macnoise1","macnoise2","macnoiselongpre0","macnoiselongpre1","macnoiselongpre2"] \
+    extra_eval_tasks=["macnoise0","macnoise1","macnoise2"] \
     extra_eval_dir="${ROOT_DIR}/data/Bench" \
     workflow_func_path="${WORKFLOW_FUNC_PATH}" \
     use_wandb="${WANDB_KEY}" \

@@ -10,9 +10,9 @@ workflow_version: "custom"
 agent_workflow: "conflict-detection"
 async_workflow: true
 parallel_loading: true
-workflow_func_path: "/seu_nvme/home/220242328/MARTI/marti/worlds/workflows/conflict_workflow.py"
+workflow_func_path: "marti/worlds/workflows/conflict_workflow.py"
 # processor_func_path: "marti/worlds/workflows/conflict_processor.py"
-processor_func_path: "/seu_nvme/home/220242328/MARTI/marti/worlds/workflows/default_processor.py"
+processor_func_path: "marti/worlds/workflows/default_processor.py"
 
 
 # Workflow arguments (passed to workflow function)
@@ -114,7 +114,7 @@ agents:
     #   is_tuning: true
 
 # Training data
-prompt_data: "json@/seu_nvme/home/220242328/MARTI/data/confiqa"  # Start with simple ConFiQA
+prompt_data: "json@data/confiqa"  # Start with simple ConFiQA
 input_key: "texts"       # Key containing the sample JSON
 label_key: "labels"     # Key containing the labels JSON
 

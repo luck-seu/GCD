@@ -8,9 +8,6 @@ from marti.controllers.multi_agent_controller import MultiAgentController
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-os.environ["CUDA_HOME"] = "/seu_share/apps/cuda-12.4"
-import deepspeed
-deepspeed.ops.op_builder.CPUAdamBuilder().load()
 
 def _validate_config(cfg: DictConfig):
     actor_world_size = cfg.actor_num_nodes * cfg.actor_num_gpus_per_node

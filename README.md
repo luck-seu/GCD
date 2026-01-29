@@ -14,7 +14,7 @@ This project implements a lightweight multi-agent collaborative framework for de
 ## File Structure
 
 ```
-MARTI/
+marti/
 ├── verifiers/
 │   └── conflict/
 │       ├── Classification_verifier.py  # Grouping verifier
