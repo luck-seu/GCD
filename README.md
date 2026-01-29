@@ -48,3 +48,10 @@ for 1-step RL training:
 ```
 bash scripts/train_conflict_1step_17b.sh
 ```
+---
+## Acknowledgement
+* The training codes are built on [MARTI](https://github.com/TsinghuaC3I/MARTI), and the evaluation suite employs [vLLM](https://github.com/vllm-project/vllm) for acceleration.
+
+* The base models are from [Qwen3 Collection](https://huggingface.co/collections/Qwen/qwen3).
+
+* The original training datasets are from [ConFiQA](https://github.com/byronBBL/Context-DPO) and [MacNoise](https://github.com/wjdghks950/Discern-and-Answer/).
