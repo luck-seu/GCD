@@ -1,9 +1,9 @@
 """
 Knowledge Conflict Detection Workflow
 
-Paper: Lightweight Agent-Collaborative Framework for Knowledge Conflict Detection
+Paper: Lightweight Agentic Framework for Knowledge Conflict Detection
 Two-stage workflow:
-  1. Classification Agent: Groups textual units by topic
+  1. Grouping Agent: Groups textual units
   2. Detection Agent: Identifies conflicting pairs within groups
 """
 from copy import deepcopy
@@ -27,29 +27,6 @@ async def workflow(
     metadata: Optional[Dict] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    """
-    Two-stage conflict detection workflow
-
-    Args:
-        prompt: JSON string containing:
-            {
-                "textual_units": [...],
-            }
-        label: JSON string containing:
-            {
-                "conflicts": [[1, 2], ...]
-            }
-        agents: List of 2 agents [classifier, detector]
-
-    Returns:
-        {
-            "prompt": original prompt,
-            "label": ground truth labels,
-            "trajectory": [classifier_turns, detector_turns],
-            "reward_matrix": [classifier_rewards, detector_rewards],
-            "final_reward": global_reward
-        }
-    """
     early_stopping_text = "\n\nConsidering the limited time by the user, I have to give the solution based on the think directly now.\n</think>\n\n"
 
     workflow_args = kwargs.get("workflow_args", {})
