@@ -181,6 +181,7 @@ async def workflow(
             for unit_idx in valid_unit_ids:
                 classification_result_str += f"TEXT {unit_idx}: {textual_units[unit_idx]}\n"
             classification_result_str += "\n"
+
     
     # Store in trajectory
     trajectory.append({
@@ -275,8 +276,11 @@ async def workflow(
         global_reward = 0.0
         Precision = 0.0
         Recall = 0.0
-
-
+    
+    alpha = 0.5
+    beta = 0.3
+    classification_reward = alpha * classification_reward + (1-alpha) * global_reward
+    detection_reward = beta * detection_reward + (1-beta) * global_reward
 
 
     trajectory.append({
